@@ -1,104 +1,79 @@
 # local-llm
 
-Local LLMs on Apple Silicon via MLX. Two setups live here: a private
-life-coach chatbot (the main one) and a dotfiles tool-calling fine-tune.
+Local LLMs on Apple Silicon via [MLX](https://github.com/ml-explore/mlx). Three
+independent projects live under [`projects/`](projects/), each self-contained
+with its own code, prompts, and scripts. A single top-level
+[`Makefile`](Makefile) wires them to one `.env` and exposes a consistent
+prefixed target namespace.
 
-Requirements: [uv](https://docs.astral.sh/uv/), `rapid-mlx` and the `hf` CLI
-(`uv tool install rapid-mlx huggingface-hub`), and a Hugging Face token
-(`hf auth login`).
-
-# Coach (therapy model)
-
-A personal life-coach/mentor chatbot. Fully local: weights, chat history, and
-accounts never leave the machine.
-
-- **Model**: [`mlx-community/Qwen3.5-9B-Fable-5-v1-oQ4`](https://huggingface.co/mlx-community/Qwen3.5-9B-Fable-5-v1-oQ4) —
-  Fable-5, a therapy-tuned Qwen3.5-9B, 4-bit oQ mixed-precision for MLX
-  (~6 GB on disk), stored in `coach-model/`. 262k context.
-- **Server**: `rapid-mlx` serves an OpenAI-compatible API on
-  `http://127.0.0.1:8081/v1` under the alias `coach`.
-- **UI**: Open WebUI (pip install, no container) on `http://localhost:3000`,
-  pointed at the rapid-mlx API. Accounts and chat history live in
-  `coach-history/` (pinned via `DATA_DIR`, gitignored).
-- **Persona**: `prompts/coach.md` — disposition, cross-session memory
-  behavior, style, and crisis boundaries (988/911 fallback). It is **not**
-  auto-loaded; set it as the system prompt in Open WebUI (per-chat or a saved
-  model preset). The server's `--pin-system-prompt` then caches that prefix.
-
-## Setup
-
-```sh
-make coach-download          # fetches both model shards into coach-model/
-uv tool install open-webui   # one time
+```
+local-llm/
+├── projects/
+│   ├── coach/            Fable-5 therapy chatbot  (prompt + download script)
+│   ├── josie/            Josiefied-Qwen2.5-3B abliterated chat model
+│   └── dotfiles-agent/  Qwen3 LoRA fine-tune + tool-calling agent
+│       ├── dotfiles_agent/   shared config + tool parser/executor
+│       ├── main.py           interactive CLI agent
+│       ├── prompts/system.md system prompt (single source of truth)
+│       ├── tools/dotfiles.json  OpenAI-style tool schema
+│       └── scripts/          prepare.py · train · fuse · quantize · test
+├── Makefile              top-level orchestration (one target namespace)
+├── .env.example          copy to .env and edit (real .env is gitignored)
+└── pyproject.toml        shared MLX deps
 ```
 
-## Use
+Model weights and session history (`coach-model/`, `josie-model/`,
+`coach-history/`, `adapters/`, `fused-model*/`, `data/`) stay at the repo root
+and are gitignored — the trackable tree is just code + config.
+
+## Requirements
+
+- [uv](https://docs.astral.sh/uv/)
+- `rapid-mlx` and the `hf` CLI: `uv tool install rapid-mlx huggingface-hub`
+- A Hugging Face token: `hf auth login`
+
+## Quick start
 
 ```sh
-make coach-serve   # terminal 1: model API on :8081
-make coach-webui   # terminal 2: chat UI on :3000
+cp .env.example .env      # then edit MODEL / PORT / ...
+make help                 # list every target
+
+# Dotfiles agent (train + serve + run)
+make dotfiles-download && make dotfiles-prepare && make dotfiles-train
+make dotfiles-run
+
+# Coach — private therapy chatbot
+make coach-download && uv tool install open-webui
+make coach-serve          # terminal 1: model API on :8081
+make coach-webui          # terminal 2: chat UI on :3000
+
+# Josie — small uncensored chat model
+make josie-download && make josie-serve   # API on :8082
 ```
 
-Open http://localhost:3000, create a local account (first run), select the
-`coach` model, paste `prompts/coach.md` as the system prompt.
+## Targets
 
-Without the UI, straight against the API:
+Run `make help` for the live list. The three namespaces:
 
-```sh
-curl -s http://127.0.0.1:8081/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d "$(jq -n --arg sys "$(cat prompts/coach.md)" \
-    '{model:"coach", messages:[{role:"system",content:$sys},{role:"user",content:"I cannot focus lately."}]}')" \
-  | jq -r '.choices[0].message.content'
-```
+- **`dotfiles-*`** — `download`, `serve`, `rapid-serve`, `prepare`, `train`,
+  `test-adapter`, `fuse`, `quantize`, `run`, `clean`
+- **`coach-*`** — `download`, `serve`, `webui`, `stop-webui`, `clean`
+- **`josie-*`** — `download`, `serve`, `clean`
+- **shared** — `webui` (Open WebUI; `WEBUI_API_PORT=8082` for josie), `help`,
+  `clean`
 
-## Serving notes
+## Project notes
 
-`make coach-serve` flags, and why:
+See each project's directory for details. Highlights:
 
-- `--kv-cache-quantization` — halves KV cache memory so long sessions don't
-  build GPU pressure.
-- No `--enable-prefix-cache` — it ate 2.7 GB and OOM'd on long turns; in a
-  growing chat only the system prompt is a shared prefix, so hit rate is low.
-- `--reasoning-parser qwen3` — parses the model's think tags out of replies.
-- `--default-temperature 0.7 --default-top-p 0.9` — coaching defaults.
-
-`make coach-clean` stops the UI and deletes the model; `coach-history/` is
-kept. `make coach-stop-webui` stops only the UI.
-
-# Josie (abliterated Qwen2.5-3B)
-
-Small uncensored chat model for quick local testing.
-
-- **Model**: [`mlx-community/Josiefied-Qwen2.5-3B-Instruct-abliterated-v1-4-bit`](https://huggingface.co/mlx-community/Josiefied-Qwen2.5-3B-Instruct-abliterated-v1-4-bit)
-  (~1.6 GB), stored in `josie-model/`.
-- **Server**: `rapid-mlx` on `http://127.0.0.1:8082/v1` under the alias `josie`.
-- **UI**: same Open WebUI as coach (`make webui`).
-
-```sh
-make josie-download          # already done if josie-model/ exists
-make josie-serve             # terminal 1: API on :8082
-make webui WEBUI_API_PORT=8082   # terminal 2: UI on :3000
-```
-
-Or keep one WebUI and add both backends under Admin → Settings → Connections:
-`http://localhost:8081/v1` (coach) and `http://localhost:8082/v1` (josie),
-API key `local`. Then pick `coach` or `josie` in the model dropdown (only the
-one currently served will answer).
-
-# Dotfiles agent
-
-LoRA fine-tune of Qwen3 that edits dotfiles via tool calls
-(`tools/dotfiles.json`). Config comes from `.env` (`MODEL`, `PORT`,
-`MAX_TOKENS`, ...).
-
-```sh
-make prepare        # raw jsonl (~/repos/home_directory/training) → data/
-make train          # LoRA fine-tune → adapters/
-make test-adapter   # smoke-test the adapter with tool schemas
-make fuse           # merge adapter into base model → fused-model/
-make quantize       # 4-bit convert → fused-model-4bit/
-make serve          # serve via mlx_lm.server (uses .env)
-make rapid-serve    # serve via rapid-mlx with auto tool-choice
-make run            # interactive CLI agent (main.py)
-```
+- **Coach** — `mlx-community/Qwen3.5-9B-Fable-5-v1-oQ4` (~6 GB, 4-bit oQ,
+  262k context). Served via `rapid-mlx` on `:8081` as `coach`. Persona lives in
+  [`projects/coach/prompts/coach.md`](projects/coach/prompts/coach.md) — set it
+  as the Open WebUI system prompt (per-chat or a saved model preset); the
+  server's `--pin-system-prompt` then caches that prefix.
+- **Josie** — `mlx-community/Josiefied-Qwen2.5-3B-Instruct-abliterated-v1-4-bit`
+  (~1.6 GB) on `:8082` as `josie`. Shares one Open WebUI with coach.
+- **Dotfiles agent** — LoRA fine-tune of Qwen3 that edits dotfiles via tool
+  calls. Training format (`scripts/prepare.py`) and the inference loop
+  (`main.py` + `dotfiles_agent/`) share one config and one system prompt so
+  they can't drift apart.

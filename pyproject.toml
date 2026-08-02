@@ -1,11 +1,10 @@
 [project]
 name = "local-llm"
 version = "0.1.0"
-description = "Local LLMs on MLX: a private life-coach (Fable-5 9B) and a dotfiles tool-calling fine-tune"
+description = "Local LLMs on MLX: a private life-coach (Fable-5 9B), a small abliterated chat model (Josie), and a dotfiles tool-calling fine-tune"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
     "mlx-lm>=0.31.3",
     "hf-transfer>=0.1.9",
-    "gguf>=0.10.0",
 ]
