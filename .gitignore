@@ -1,0 +1,27 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local env (commit .env.example instead)
+.env
+
+# Fine-tuning artifacts
+adapters/
+fused-model*/
+data/
+Modelfile
+
+# Per-project model dirs + session history (large / private)
+coach-model/
+coach-history/
+josie-model/
+
+# Open WebUI auto-generated secret (written to cwd by `open-webui serve`)
+.webui_secret_key

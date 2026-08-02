@@ -1,0 +1,134 @@
+[
+	{
+		"type": "function",
+		"function": {
+			"name": "read_file",
+			"description": "Read the contents of a dotfile",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file, supports ~ expansion"
+					}
+				},
+				"required": ["path"]
+			}
+		}
+	},
+	{
+		"type": "function",
+		"function": {
+			"name": "write_file",
+			"description": "Write or overwrite a file with the given content",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string",
+						"description": "Path to the file"
+					},
+					"content": {
+						"type": "string",
+						"description": "Full content to write"
+					}
+				},
+				"required": ["path", "content"]
+			}
+		}
+	},
+	{
+		"type": "function",
+		"function": {
+			"name": "edit_file",
+			"description": "Replace an exact string in a file with new content",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"old": {
+						"type": "string",
+						"description": "Exact text to find"
+					},
+					"new": {
+						"type": "string",
+						"description": "Replacement text"
+					}
+				},
+				"required": ["path", "old", "new"]
+			}
+		}
+	},
+	{
+		"type": "function",
+		"function": {
+			"name": "append_to_file",
+			"description": "Append a block of content to the end of a file",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"path": {
+						"type": "string"
+					},
+					"content": {
+						"type": "string"
+					}
+				},
+				"required": ["path", "content"]
+			}
+		}
+	},
+	{
+		"type": "function",
+		"function": {
+			"name": "list_files",
+			"description": "List files in a directory",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"dir": {
+						"type": "string",
+						"description": "Directory path to list"
+					}
+				},
+				"required": ["dir"]
+			}
+		}
+	},
+	{
+		"type": "function",
+		"function": {
+			"name": "run_command",
+			"description": "Run a shell command and return its stdout/stderr",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"cmd": {
+						"type": "string",
+						"description": "Shell command to execute"
+					}
+				},
+				"required": ["cmd"]
+			}
+		}
+	},
+	{
+		"type": "function",
+		"function": {
+			"name": "check_command_exists",
+			"description": "Check whether a CLI tool is installed",
+			"parameters": {
+				"type": "object",
+				"properties": {
+					"command": {
+						"type": "string",
+						"description": "Command name to check"
+					}
+				},
+				"required": ["command"]
+			}
+		}
+	}
+]
