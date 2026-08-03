@@ -45,10 +45,11 @@ make dotfiles-run
 # Coach — private therapy chatbot
 make coach-download && uv tool install open-webui
 make coach-serve          # terminal 1: model API on :8081
-make coach-webui          # terminal 2: chat UI on :3000
+make webui                # terminal 2: chat UI on :3000
 
-# Josie — small uncensored chat model
-make josie-download && make josie-serve   # API on :8082
+# Josie — small uncensored chat model (share the same webui)
+make josie-download && make josie-serve   # terminal 3: API on :8082
+# In Open WebUI: Admin -> Settings -> Connections -> add http://localhost:8082/v1
 ```
 
 ## Targets
@@ -57,9 +58,9 @@ Run `make help` for the live list. The three namespaces:
 
 - **`dotfiles-*`** — `download`, `serve`, `rapid-serve`, `prepare`, `train`,
   `test-adapter`, `fuse`, `quantize`, `run`, `clean`
-- **`coach-*`** — `download`, `serve`, `webui`, `stop-webui`, `clean`
+- **`coach-*`** — `download`, `serve`, `clean`
 - **`josie-*`** — `download`, `serve`, `clean`
-- **shared** — `webui` (Open WebUI; `WEBUI_API_PORT=8082` for josie), `help`,
+- **shared** — `webui` (one Open WebUI for all models), `webui-stop`, `help`,
   `clean`
 
 ## Project notes

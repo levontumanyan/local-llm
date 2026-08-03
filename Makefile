@@ -86,15 +86,12 @@ dotfiles-test: ## run the pytest unit tests (no model/GPU needed)
 # ─────────────────────────────────────────────────────────────────────────────
 # Coach — Fable-5 therapy model (rapid-mlx) + Open WebUI
 # ─────────────────────────────────────────────────────────────────────────────
-COACH_DIR        := $(COACH)
-COACH_PORT       := 8081
-COACH_ALIAS      := coach
-COACH_WEBUI_PORT := 3000
-COACH_HISTORY    := $(ROOT)/coach-history
-# Which rapid-mlx port Open WebUI talks to by default (8081=coach, 8082=josie).
-WEBUI_API_PORT ?= $(COACH_PORT)
+COACH_DIR     := $(COACH)
+COACH_PORT    := 8081
+COACH_ALIAS   := coach
+COACH_HISTORY := $(ROOT)/coach-history
 
-.PHONY: coach-download coach-serve coach-webui coach-stop-webui coach-clean
+.PHONY: coach-download coach-serve coach-stop coach-clean
 
 coach-download: ## fetch Fable-5 MLX model (parallel, authenticated, resumable)
 	bash $(ROOT)/projects/coach/scripts/download.sh $(COACH_DIR)
@@ -110,14 +107,8 @@ coach-serve: ## serve coach via rapid-mlx on $(COACH_PORT)
 		--kv-cache-quantization --pin-system-prompt \
 		--default-temperature 0.7 --default-top-p 0.9
 
-coach-webui: ## Open WebUI pointed at the coach API (alias for `make webui`)
-	$(MAKE) webui
-
-coach-stop-webui: ## stop the Open WebUI process
-	pkill -f "open-webui serve" 2>/dev/null || true
-
 coach-clean: ## stop the webui and delete the local model (history is kept)
-	pkill -f "open-webui serve" 2>/dev/null || true
+	$(MAKE) webui-stop
 	rm -rf $(COACH_DIR)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -146,21 +137,39 @@ josie-clean: ## remove the local josie model weights
 	rm -rf $(JOSIE_DIR)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Shared UI + help
+# Shared UI — one Open WebUI for all models
 # ─────────────────────────────────────────────────────────────────────────────
-# First run: `uv tool install open-webui`. History lives in coach-history/ (shared).
-# To use both models in one UI: Admin -> Settings -> Connections -> add
-# http://localhost:8081/v1 and http://localhost:8082/v1 (key: local).
-.PHONY: webui help clean
+# First run: `uv tool install open-webui`. History lives in coach-history/.
+#
+# One webui serves all models. Start each backend in its own terminal:
+#   make coach-serve      # :8081
+#   make josie-serve      # :8082
+# Then start the UI once:
+#   make webui
+#
+# In Open WebUI: Admin -> Settings -> Connections -> add each backend:
+#   http://localhost:8081/v1   (coach)
+#   http://localhost:8082/v1   (josie)
+# API key: local. Then pick the model in the dropdown.
 
-webui: ## launch Open WebUI (override API with WEBUI_API_PORT=8082 for josie)
+WEBUI_PORT    := 3000
+WEBUI_HISTORY := $(COACH_HISTORY)
+# Which backend the webui talks to on first run (before you add more in the UI).
+WEBUI_API_PORT ?= $(COACH_PORT)
+
+.PHONY: webui webui-stop help clean
+
+webui: ## launch Open WebUI (one UI for all models; add backends in Settings)
 	@command -v open-webui >/dev/null 2>&1 || { echo "open-webui not installed. Run: uv tool install open-webui"; exit 1; }
 	OPENAI_API_BASE_URL=http://localhost:$(WEBUI_API_PORT)/v1 \
 	OPENAI_API_KEY=local \
-	DATA_DIR=$(COACH_HISTORY) \
-	exec open-webui serve --port $(COACH_WEBUI_PORT)
+	DATA_DIR=$(WEBUI_HISTORY) \
+	exec open-webui serve --port $(WEBUI_PORT)
+
+webui-stop: ## stop the Open WebUI process
+	pkill -f "open-webui serve" 2>/dev/null || true
 
 help: ## show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "targets:\n"} /^[a-zA-Z][a-zA-Z0-9_-]*:.*##/ {printf "  %-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-clean: dotfiles-clean coach-stop-webui ## stop webui + dotfiles-clean
+clean: dotfiles-clean webui-stop ## stop webui + dotfiles-clean
