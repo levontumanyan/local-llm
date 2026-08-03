@@ -29,6 +29,16 @@ _CLOSE = chr(60) + "/tool_call" + chr(62)
 _TOOL_CALL_RE = re.compile(re.escape(_OPEN) + r"(.*?)" + re.escape(_CLOSE), re.DOTALL)
 
 
+def _build_open() -> str:
+	"""Return the opening tool-call tag (kept magic-byte-free for callers/tests)."""
+	return _OPEN
+
+
+def _build_close() -> str:
+	"""Return the closing tool-call tag."""
+	return _CLOSE
+
+
 def load_tools() -> list[dict]:
 	"""Load the OpenAI-style tool schema used for chat-template rendering."""
 	return json.loads(TOOLS_PATH.read_text())

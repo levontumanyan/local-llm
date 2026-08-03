@@ -31,10 +31,14 @@ PATH_HINTS = {
 	"ssh": "~/.ssh/config",
 }
 
+# Longest keyword first so "nvim" is matched before "vim" (vim is a substring
+# of nvim) and "starship" before "ship", etc. Frozen at import for stable order.
+_PATH_HINTS_ORDERED = sorted(PATH_HINTS.items(), key=lambda kv: len(kv[0]), reverse=True)
+
 
 def infer_path(prompt: str, completion: str) -> str:
 	text = (prompt + " " + completion).lower()
-	for keyword, path in PATH_HINTS.items():
+	for keyword, path in _PATH_HINTS_ORDERED:
 		if keyword in text:
 			return path
 	return "~/.zshrc"

@@ -41,7 +41,7 @@ MODEL_ALIAS := dotfiles-coder
 
 .PHONY: dotfiles-download dotfiles-serve dotfiles-rapid-serve \
         dotfiles-prepare dotfiles-train dotfiles-test-adapter \
-        dotfiles-fuse dotfiles-quantize dotfiles-run dotfiles-clean
+        dotfiles-fuse dotfiles-quantize dotfiles-run dotfiles-clean dotfiles-test
 
 dotfiles-download: ## fetch the base model via `hf` (authenticated, parallel)
 	uv run hf download $(MODEL) --max-workers $(MAX_WORKERS)
@@ -79,6 +79,9 @@ dotfiles-run: ## interactive CLI agent (main.py)
 
 dotfiles-clean: ## remove adapter, fused model, and local data
 	rm -rf $(ADAPTER) $(FUSED) $(DATA_DIR) Modelfile
+
+dotfiles-test: ## run the pytest unit tests (no model/GPU needed)
+	uv run pytest -v
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Coach — Fable-5 therapy model (rapid-mlx) + Open WebUI
