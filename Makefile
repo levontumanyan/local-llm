@@ -147,10 +147,9 @@ josie-clean: ## remove the local josie model weights
 # Then start the UI once:
 #   make webui
 #
-# In Open WebUI: Admin -> Settings -> Connections -> add each backend:
-#   http://localhost:8081/v1   (coach)
-#   http://localhost:8082/v1   (josie)
-# API key: local. Then pick the model in the dropdown.
+# Backends are auto-registered in the webui DB on every launch via
+# scripts/webui-config.py — no manual UI setup needed. Just pick the model
+# in the dropdown.
 
 WEBUI_PORT    := 3000
 WEBUI_HISTORY := $(COACH_HISTORY)
@@ -159,8 +158,12 @@ WEBUI_API_PORT ?= $(COACH_PORT)
 
 .PHONY: webui webui-stop help clean
 
-webui: ## launch Open WebUI (one UI for all models; add backends in Settings)
+# The semicolon-separated backend list passed to webui-config.py.
+WEBUI_BACKENDS := http://localhost:$(COACH_PORT)/v1;local;http://localhost:$(JOSIE_PORT)/v1;local
+
+webui: ## launch Open WebUI (one UI for all models; backends auto-registered)
 	@command -v open-webui >/dev/null 2>&1 || { echo "open-webui not installed. Run: uv tool install open-webui"; exit 1; }
+	@uv run python scripts/webui-config.py "$(WEBUI_HISTORY)/webui.db" "$(WEBUI_BACKENDS)"
 	OPENAI_API_BASE_URL=http://localhost:$(WEBUI_API_PORT)/v1 \
 	OPENAI_API_KEY=local \
 	DATA_DIR=$(WEBUI_HISTORY) \
