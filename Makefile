@@ -137,6 +137,23 @@ josie-clean: ## remove the local josie model weights
 	rm -rf $(JOSIE_DIR)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# search — sub-500M local web search & text parser CLI
+# ─────────────────────────────────────────────────────────────────────────────
+SEARCH_PROJECT := $(ROOT)/projects/search
+PARSER         ?= trafilatura
+VERBOSE        ?=
+
+.PHONY: search-run
+
+search-run: ## run search agent CLI (QUERY="..." PARSER=jina|trafilatura|readability VERBOSE=1)
+	PYTHONPATH=$(SEARCH_PROJECT) uv run python $(SEARCH_PROJECT)/main.py \
+		--query "$(QUERY)" \
+		--parser $(PARSER) \
+		$(if $(VERBOSE),--verbose,)
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Shared UI — one Open WebUI for all models
 # ─────────────────────────────────────────────────────────────────────────────
 # First run: `uv tool install open-webui`. History lives in coach-history/.
